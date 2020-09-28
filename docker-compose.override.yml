@@ -1,0 +1,8 @@
+version: '3'
+services:
+
+  flask:
+    environment:
+        NAPALM_USERNAME: cisco
+        NAPALM_PASSWORD: cisco
+        DNS: ''
