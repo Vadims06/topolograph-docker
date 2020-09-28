@@ -17,3 +17,6 @@ Open the URL `http://localhost/` in a web-browser.
 It's possible to set login and password for Napalm methods (in order to login to network device and get OSPF LSDB) as well as DNS server in `docker-compose.override.yml`.
 * edit and save `docker-compose.override.yml`
 * run docker-compose up -d
+
+## About
+You can find more info about Topolograph here [topolograph]: https://github.com/Vadims06/topolograph
