@@ -3,7 +3,7 @@ services:
 
   flask:
     container_name: flask
-    image: vadims06/topolograph:2.0
+    image: vadims06/topolograph:latest
     restart: unless-stopped
     environment:
       APP_ENV: "prod"
