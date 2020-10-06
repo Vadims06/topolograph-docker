@@ -13,8 +13,6 @@ services:
       MONGODB_USERNAME: admin
       MONGODB_PASSWORD: myadminpassword
       MONGODB_HOSTNAME: mongodb
-    volumes:
-      - appdata:/var/www
     depends_on:
       - mongodb
     networks:
@@ -63,8 +61,6 @@ networks:
 
 volumes:
   mongodbdata:
-    driver: local
-  appdata:
     driver: local
   nginxdata:
     driver: local
