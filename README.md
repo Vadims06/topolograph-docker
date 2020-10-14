@@ -1,6 +1,6 @@
 # topolograph-docker
 ## Quickstart
-
+Install Docker Desktop for Windows/Mac
 To get Topolograph Docker up and running run the following commands.
 
 ```bash
