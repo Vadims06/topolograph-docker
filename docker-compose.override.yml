@@ -5,4 +5,7 @@ services:
     environment:
         NAPALM_USERNAME: cisco
         NAPALM_PASSWORD: cisco
+        NAPALM_PORT: 22
         DNS: ''
+        NETBOX_URL: '' # http://localhost:8000
+        NETBOX_RO_TOKEN : ''
