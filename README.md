@@ -11,23 +11,20 @@ docker-compose up -d
 ```
 
 The Topolograph site will be available after a few minutes.
-Open the URL `http://localhost/` in a web-browser.
+Open the URL `http://localhost:8080/` in a web-browser.
 
-## User config
-### Username and Password for Napalm (optional)
-It's possible to set login and password for Napalm methods (in order to login to network device and get OSPF LSDB) as well as DNS server in `docker-compose.override.yml`.
-* edit and save `docker-compose.override.yml`
-* run docker-compose up -d
+## Variables
+The application's variables are grouped in .env file
+* TOPOLOGRAPH_PORT - the application port
+```
+TOPOLOGRAPH_PORT=8099 <-- whatever you want, and then open the URL http://localhost:8099/ after re-runing docker-compose up -d
+```  
+* NAPALM_USERNAME, NAPALM_PASSWORD - credentials for Napalm methods in order to login to network device and get OSPF LSDB
+* DNS - accepts IP address of DNS server in order to resolve OSPF RID and show device names on a graph
+* NETBOX_URL, NETBOX_RO_TOKEN - resolves device's hostname in Netbox, assigns devices by groups  
+* TOPOLOGRAPH_WEB_API_USERNAME_EMAIL, TOPOLOGRAPH_WEB_API_PASSWORD - credentials for API requests  
+* TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS - whitelistening IP sources of API requests  
 
-### Installation features on Windows
-Port 80 could be already used by Windows on windows PC, so just change the port to another one, for example on 8080
-* edit and save `docker-compose.yml`
-```
-webserver:
-    ports:
-      - "8080:8080"
-```
-* open the URL `http://localhost:8080/` in a web-browser.
 
 ## About
-You can find more info about Topolograph here [topolograph]: https://github.com/Vadims06/topolograph
+You can find more info about Topolograph here: https://github.com/Vadims06/topolograph

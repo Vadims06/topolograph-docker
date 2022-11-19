@@ -13,6 +13,16 @@ services:
       MONGODB_USERNAME: admin
       MONGODB_PASSWORD: myadminpassword
       MONGODB_HOSTNAME: mongodb
+      NAPALM_USERNAME: $NAPALM_USERNAME
+      NAPALM_PASSWORD: $NAPALM_PASSWORD
+      NAPALM_PORT: $NAPALM_PORT
+      DNS: $DNS
+      NETBOX_URL: $NETBOX_URL # http://localhost:8000
+      NETBOX_RO_TOKEN : $NETBOX_RO_TOKEN
+      TOPOLOGRAPH_WEB_API_USERNAME_EMAIL: $TOPOLOGRAPH_WEB_API_USERNAME_EMAIL
+      TOPOLOGRAPH_WEB_API_PASSWORD: $TOPOLOGRAPH_WEB_API_PASSWORD
+      TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS: $TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS
+      SWAGGER_HOST: 'localhost:$TOPOLOGRAPH_PORT'
     depends_on:
       - mongodb
     networks:
@@ -36,18 +46,21 @@ services:
       - backend
 
   webserver:
-    image: vadims06/webserver:latest
+    image: nginx:latest
     container_name: webserver
     restart: unless-stopped
+    command:  ["nginx", "-g", "daemon off;"]
     environment:
-      APP_ENV: "prod"
-      APP_NAME: "webserver"
-      APP_DEBUG: "true"
-      SERVICE_NAME: "webserver"
+      NGINX_PORT: 8079
     ports:
-      - "80:8080"
+      - "$TOPOLOGRAPH_PORT:8079"
     volumes:
-      - nginxdata:/var/log/nginx
+      - type: volume
+        source: nginxdata
+        target: /var/log/nginx
+      - type: bind
+        source: ./webserver/templates/app.conf.template
+        target: /etc/nginx/templates/app.conf.template
     depends_on:
       - flask
     networks:

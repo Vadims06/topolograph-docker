@@ -1,0 +1,25 @@
+upstream app_server {
+    server flask:5000;
+}
+server {
+    listen 0.0.0.0:${NGINX_PORT};
+    server_name _;
+    error_log  /var/log/nginx/error.log warn;
+    access_log /var/log/nginx/access.log;
+    client_max_body_size 64M;
+
+    location / {
+        try_files $uri @proxy_to_app;
+    }
+
+    location @proxy_to_app {
+        gzip_static on;
+
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host $http_host;
+        proxy_buffering off;
+        proxy_redirect off;
+        proxy_pass http://app_server;
+    }
+}
