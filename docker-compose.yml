@@ -28,6 +28,8 @@ services:
     networks:
       - frontend
       - backend
+    ports:
+      - $TOPOLOGRAPH_WEB_API_PORT:5000
 
   mongodb:
     image: mongo:4.0.8
