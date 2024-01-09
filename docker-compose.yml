@@ -1,4 +1,4 @@
-version: '3'
+version: '3.7'
 services:
 
   flask:
@@ -9,10 +9,10 @@ services:
       APP_ENV: "prod"
       APP_DEBUG: "False"
       APP_PORT: 5000
-      MONGODB_DATABASE: admin
-      MONGODB_USERNAME: admin
-      MONGODB_PASSWORD: myadminpassword
-      MONGODB_HOSTNAME: mongodb
+      MONGODB_DATABASE: $MONGODB_DATABASE
+      MONGODB_USERNAME: $MONGODB_USERNAME
+      MONGODB_PASSWORD: $MONGODB_PASSWORD
+      MONGODB_HOSTNAME: $MONGODB_HOSTNAME
       NAPALM_USERNAME: $NAPALM_USERNAME
       NAPALM_PASSWORD: $NAPALM_PASSWORD
       NAPALM_PORT: $NAPALM_PORT
@@ -35,9 +35,9 @@ services:
     restart: unless-stopped
     command: mongod --auth
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: myadminpassword
-      MONGO_INITDB_DATABASE: admin
+      MONGO_INITDB_ROOT_USERNAME: $MONGODB_USERNAME
+      MONGO_INITDB_ROOT_PASSWORD: $MONGODB_PASSWORD
+      MONGO_INITDB_DATABASE: $MONGODB_DATABASE
       MONGODB_DATA_DIR: /data/db
       MONDODB_LOG_DIR: /dev/null
     volumes:
@@ -70,6 +70,7 @@ networks:
   frontend:
     driver: bridge
   backend:
+    name: topolograph_backend
     driver: bridge
 
 volumes:
