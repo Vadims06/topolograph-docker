@@ -17,7 +17,7 @@ Open the URL `http://localhost:8080/` in a web-browser.
 The application's variables are grouped in .env file
 * TOPOLOGRAPH_PORT - the application port
 ```
-TOPOLOGRAPH_PORT=8099 <-- whatever you want, and then open the URL http://localhost:8099/ after re-runing docker-compose up -d
+TOPOLOGRAPH_PORT=8080 <-- whatever you want, and then open the URL http://localhost:8080/ after re-runing docker-compose up -d
 ```  
 * NAPALM_USERNAME, NAPALM_PASSWORD - credentials for Napalm methods in order to login to network device and get OSPF LSDB
 * DNS - accepts IP address of DNS server in order to resolve OSPF RID and show device names on a graph
@@ -30,7 +30,7 @@ In order to create the user with password from `.env` file and add your networks
 ```
 #python3
 import requests
-res = requests.post('http://localhost:8088/create-default-credentials')
+res = requests.post('http://localhost:8080/create-default-credentials')
 res.json()
 {'errors': '', 'status': 'ok'}
 ```
