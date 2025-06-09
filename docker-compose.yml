@@ -65,6 +65,24 @@ services:
     networks:
       - frontend
 
+  flask-create-creds-from-env:
+    image: vadims06/topolograph:latest
+    environment:
+      TOPOLOGRAPH_PORT: 5000
+      TOPOLOGRAPH_HOST: flask
+      TOPOLOGRAPH_WEB_API_USERNAME_EMAIL: $TOPOLOGRAPH_WEB_API_USERNAME_EMAIL
+      TOPOLOGRAPH_WEB_API_PASSWORD: $TOPOLOGRAPH_WEB_API_PASSWORD
+      TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS: $TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS
+    command: ["python", "/home/flask/create_credentials_from_env.py"]
+    volumes:
+      - type: bind
+        source: ./init/create_credentials_from_env.py
+        target: /home/flask/create_credentials_from_env.py
+    depends_on:
+      - flask
+    networks:
+      - frontend
+
 networks:
   frontend:
     driver: bridge
