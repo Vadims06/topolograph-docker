@@ -9,6 +9,16 @@ cd topolograph-docker
 docker-compose pull
 docker-compose up -d
 ```
+or run `install.sh` script to start Topolograph and Watchers
+```bash
+sudo ./install.sh
+```
+or
+```bash
+curl -O https://raw.githubusercontent.com/Vadims06/topolograph-docker/master/install.sh
+chmod +x install.sh
+sudo ./install.sh
+```
 
 The Topolograph site will be available after a few minutes.
 Open the URL `http://localhost:8080/` in a web-browser.
