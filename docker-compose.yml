@@ -29,7 +29,7 @@ services:
       - backend
 
   mongodb:
-    image: mongo:4.0.8
+    image: mongo:4.2 # Upgrade to 4.2 First, Then to 4.4.29
     container_name: mongodb
     restart: unless-stopped
     command: mongod --auth
