@@ -50,9 +50,9 @@ services:
     restart: unless-stopped
     command:  ["nginx", "-g", "daemon off;"]
     environment:
-      NGINX_PORT: 8079
+      NGINX_PORT: 8080
     ports:
-      - "$TOPOLOGRAPH_PORT:8079"
+      - "$TOPOLOGRAPH_PORT:8080"
     volumes:
       - type: volume
         source: nginxdata
