@@ -6,6 +6,8 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+SUMMARY=()
+
 check_mark() {
   echo -e "${GREEN}✔ $1${NC}"
 }
@@ -14,12 +16,95 @@ cross_mark() {
   echo -e "${RED}✘ $1${NC}"
 }
 
+# ---------- INSTALLERS ----------
+
+install_docker_ubuntu() {
+  echo "Installing Docker for Ubuntu..."
+  sudo apt-get update
+  sudo apt-get install ca-certificates curl
+  sudo install -m 0755 -d /etc/apt/keyrings
+  sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+  # Add the repository to Apt sources:
+  echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+    $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  sudo apt-get update
+  sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  check_mark "Docker installed (Ubuntu)"
+}
+
+install_clab() {
+  echo "Installing Containerlab..."
+  bash -c "$(curl -sL https://get.containerlab.dev)"
+  check_mark "Containerlab installed"
+}
+
+install_git() {
+  echo "Installing Git..."
+  sudo apt-get update
+  sudo apt-get install -y git
+  check_mark "Git installed"
+}
+
+install_conntrack() {
+  echo "Installing conntrack..."
+  sudo apt-get update
+  sudo apt-get install -y conntrack
+  check_mark "Conntrack installed"
+}
+
+# ---------- CHECKERS ----------
+
 check_docker_installed() {
-  if ! command -v docker &> /dev/null; then
-    cross_mark "Docker is not installed. Please install Docker first."
-    exit 1
+  if ! command -v docker &>/dev/null; then
+    if [[ -f /etc/lsb-release ]] && grep -qi ubuntu /etc/lsb-release; then
+      install_docker_ubuntu
+    else
+      cross_mark "Docker is not installed. Please install Docker manually for your OS."
+      exit 1
+    fi
   else
     check_mark "Docker is installed"
+  fi
+}
+
+check_docker_compose_cmd() {
+  if docker compose version &>/dev/null; then
+    echo "Using 'docker compose'"
+    DOCKER_COMPOSE="docker compose"
+  elif docker-compose version &>/dev/null; then
+    echo "Using 'docker-compose'"
+    DOCKER_COMPOSE="docker-compose"
+  else
+    cross_mark "Neither 'docker compose' nor 'docker-compose' found!"
+    exit 1
+  fi
+}
+
+check_clab_installed() {
+  if ! command -v clab &>/dev/null; then
+    install_clab
+  else
+    check_mark "Containerlab is installed"
+  fi
+}
+
+check_git_installed() {
+  if ! command -v git &>/dev/null; then
+    install_git
+  else
+    check_mark "Git is installed"
+  fi
+}
+
+check_conntrack_installed() {
+  if ! command -v conntrack &>/dev/null; then
+    install_conntrack
+  else
+    check_mark "Conntrack is installed"
   fi
 }
 
@@ -34,9 +119,15 @@ check_container_running() {
   fi
 }
 
+# ---------- CORE FUNCTIONS ----------
+
 check_topolograph_suite_state() {
   echo "Checking Topolograph Suite Status..."
   check_docker_installed
+  check_clab_installed
+  check_git_installed
+  check_conntrack_installed
+  check_docker_compose_cmd
   check_container_running flask
   check_container_running ospfwatcher
   check_container_running isiswatcher
@@ -45,6 +136,10 @@ check_topolograph_suite_state() {
 ask_installation_options() {
   echo "Checking Topolograph Suite Status..."
   check_docker_installed
+  check_clab_installed
+  check_git_installed
+  check_conntrack_installed
+  check_docker_compose_cmd
 
   local topolograph_missing=false
 
@@ -84,9 +179,7 @@ ask_installation_options() {
     4) echo "No components selected for installation.";;
     *) echo "Invalid choice"; exit 1;;
   esac
-
 }
-
 
 generate_watcher_configs() {
   local protocol=$1
@@ -102,24 +195,20 @@ generate_watcher_configs() {
 select_watcher_folder() {
   local script_dir
   script_dir="$(pwd)"
-
   local possible_dirs=("ospfwatcher/watcher" "isiswatcher/watcher" "watcher")
   local folders=()
   local labels=()
 
-  shopt -s nullglob  # Prevent wildcard from being treated literally
-
+  shopt -s nullglob
   for dir in "${possible_dirs[@]}"; do
     local abs_dir="$script_dir/$dir"
     [[ -d "$abs_dir" ]] || continue
-
     for d in "$abs_dir"/watcher*-gre*-*/; do
       [[ -d "$d" ]] || continue
       folders+=("${d%/}")
-      labels+=("$(basename "${d%/}")")  # Correct: only basename
+      labels+=("$(basename "${d%/}")")
     done
   done
-
   shopt -u nullglob
 
   if [[ ${#folders[@]} -eq 0 ]]; then
@@ -134,12 +223,10 @@ select_watcher_folder() {
 
   local choice
   read -rp "Select watcher folder to deploy (1-${#folders[@]}): " choice
-
   if ! [[ "$choice" =~ ^[0-9]+$ ]] || (( choice < 1 || choice > ${#folders[@]} )); then
     echo "Invalid choice." >&2
     return 1
   fi
-
   echo "${folders[$((choice - 1))]}"
 }
 
@@ -150,7 +237,7 @@ start_topolograph() {
   else
     git clone https://github.com/Vadims06/topolograph-docker.git topolograph || true
     cd topolograph
-    docker compose up -d
+    $DOCKER_COMPOSE up -d
     cd ..
   fi
   SUMMARY+=("Topolograph started")
@@ -158,8 +245,6 @@ start_topolograph() {
 
 start_ospfwatcher() {
   echo -e "\n${GREEN}=== Starting OSPF Watcher ===${NC}"
-
-  echo "Cloning OSPF Watcher repository..."
   if git clone https://github.com/Vadims06/ospfwatcher.git ospfwatcher >/dev/null 2>&1; then
     check_mark "OSPF Watcher repository cloned."
   else
@@ -167,16 +252,15 @@ start_ospfwatcher() {
   fi
 
   cd ospfwatcher || exit
-
   generate_watcher_configs "ospf"
-
   watcher_folder=$(select_watcher_folder)
+
   echo "Deploying watcher from folder: '$(basename "$watcher_folder")'"
   if [[ -f "$watcher_folder/config.yml" ]]; then
     sudo clab deploy --topo "$watcher_folder/config.yml"
     if ! check_container_running ospf-logstash; then
-      sudo docker compose build
-      sudo docker compose up -d
+      sudo $DOCKER_COMPOSE build
+      sudo $DOCKER_COMPOSE up -d
       SUMMARY+=("Logstash to export OSPF Watcher logs started")
     fi
     SUMMARY+=("OSPF Watcher deployed from $(basename "$watcher_folder")")
@@ -196,16 +280,15 @@ start_isiswatcher() {
   fi
 
   cd isiswatcher || exit
-
   generate_watcher_configs "isis"
-
   watcher_folder=$(select_watcher_folder)
+
   echo "Deploying watcher from folder: '$(basename "$watcher_folder")'"
   if [[ -f "$watcher_folder/config.yml" ]]; then
     sudo clab deploy --topo "$watcher_folder/config.yml"
     if ! check_container_running isis-logstash; then
-      sudo docker compose build
-      sudo docker compose up -d
+      sudo $DOCKER_COMPOSE build
+      sudo $DOCKER_COMPOSE up -d
       SUMMARY+=("Logstash to export ISIS Watcher logs started")
     fi
     SUMMARY+=("ISIS Watcher deployed from $(basename "$watcher_folder")")
@@ -217,11 +300,9 @@ start_isiswatcher() {
 }
 
 fix_ownership() {
-  # Determine the actual user who ran sudo (or fallback to root)
   local user="${SUDO_USER:-root}"
   local group
   group=$(id -gn "$user")
-
   for dir in topolograph ospfwatcher isiswatcher; do
     if [[ -d "$dir" ]]; then
       sudo chown -R "$user:$group" "$dir"
@@ -242,16 +323,13 @@ main() {
   if [[ "$INSTALL_TOPO" == true ]]; then
     start_topolograph
   fi
-
   if [[ "$INSTALL_OSPF" == true ]]; then
     start_ospfwatcher
   fi
   if [[ "$INSTALL_ISIS" == true ]]; then
     start_isiswatcher
   fi
-
   fix_ownership
-
   print_summary
 }
 
