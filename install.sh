@@ -26,7 +26,6 @@ install_docker_ubuntu() {
   sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
   sudo chmod a+r /etc/apt/keyrings/docker.asc
 
-  # Add the repository to Apt sources:
   echo \
     "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
     $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
@@ -173,10 +172,23 @@ ask_installation_options() {
   echo "  4) Do not install anything"
   read -rp "Enter your choice (1-4): " choice
   case $choice in
-    1) INSTALL_OSPF=true;;
-    2) INSTALL_ISIS=true;;
-    3) INSTALL_OSPF=true; INSTALL_ISIS=true;;
+    1) INSTALL_OSPF=true; ask_deployment_mode "ospf";;
+    2) INSTALL_ISIS=true; ask_deployment_mode "isis";;
+    3) INSTALL_OSPF=true; ask_deployment_mode "ospf"; INSTALL_ISIS=true; ask_deployment_mode "isis";;
     4) echo "No components selected for installation.";;
+    *) echo "Invalid choice"; exit 1;;
+  esac
+}
+
+ask_deployment_mode() {
+  local proto=$1
+  echo -e "\nSelect deployment mode for ${proto^^} Watcher:"
+  echo "  1) Local clab"
+  echo "  2) Network device"
+  read -rp "Enter your choice (1-2): " mode
+  case $mode in
+    1) eval "DEPLOY_${proto^^}_CLAB=true";;
+    2) eval "DEPLOY_${proto^^}_NETDEV=true";;
     *) echo "Invalid choice"; exit 1;;
   esac
 }
@@ -192,43 +204,7 @@ generate_watcher_configs() {
     vadims06/${protocol}-watcher:latest python3 ./client.py --action add_watcher
 }
 
-select_watcher_folder() {
-  local script_dir
-  script_dir="$(pwd)"
-  local possible_dirs=("ospfwatcher/watcher" "isiswatcher/watcher" "watcher")
-  local folders=()
-  local labels=()
-
-  shopt -s nullglob
-  for dir in "${possible_dirs[@]}"; do
-    local abs_dir="$script_dir/$dir"
-    [[ -d "$abs_dir" ]] || continue
-    for d in "$abs_dir"/watcher*-gre*-*/; do
-      [[ -d "$d" ]] || continue
-      folders+=("${d%/}")
-      labels+=("$(basename "${d%/}")")
-    done
-  done
-  shopt -u nullglob
-
-  if [[ ${#folders[@]} -eq 0 ]]; then
-    echo "No watcher config folders found!" >&2
-    return 1
-  fi
-
-  >&2 echo "Available OSPF/ISIS watcher configurations:"
-  for i in "${!folders[@]}"; do
-    >&2 echo "  $((i+1))) ${labels[i]}"
-  done
-
-  local choice
-  read -rp "Select watcher folder to deploy (1-${#folders[@]}): " choice
-  if ! [[ "$choice" =~ ^[0-9]+$ ]] || (( choice < 1 || choice > ${#folders[@]} )); then
-    echo "Invalid choice." >&2
-    return 1
-  fi
-  echo "${folders[$((choice - 1))]}"
-}
+# ---------- STARTERS ----------
 
 start_topolograph() {
   echo "Starting Topolograph..."
@@ -245,29 +221,70 @@ start_topolograph() {
 
 start_ospfwatcher() {
   echo -e "\n${GREEN}=== Starting OSPF Watcher ===${NC}"
-  if git clone https://github.com/Vadims06/ospfwatcher.git ospfwatcher >/dev/null 2>&1; then
+  if [[ ! -d "$BASE_DIR/ospfwatcher" ]]; then
+    echo "[$(date)] Cloning ospfwatcher repository..."
+    git clone https://github.com/Vadims06/ospfwatcher.git ospfwatcher
     check_mark "OSPF Watcher repository cloned."
   else
-    cross_mark "OSPF Watcher repository exists or failed to clone."
+    cross_mark "OSPF Watcher repository exists"
   fi
 
   cd ospfwatcher || exit
-  generate_watcher_configs "ospf"
-  watcher_folder=$(select_watcher_folder)
 
-  echo "Deploying watcher from folder: '$(basename "$watcher_folder")'"
-  if [[ -f "$watcher_folder/config.yml" ]]; then
-    sudo clab deploy --topo "$watcher_folder/config.yml"
-    if ! check_container_running ospf-logstash; then
-      sudo $DOCKER_COMPOSE build
-      sudo $DOCKER_COMPOSE up -d
-      SUMMARY+=("Logstash to export OSPF Watcher logs started")
+  if [[ "$DEPLOY_OSPF_CLAB" == true ]]; then
+    echo "[$(date)] start prepairing clab"
+    ./containerlab/ospf01/prepare.sh
+    check_mark "Local clab prepaired."
+    # create expected folder for watcher logs
+    mkdir -p ./watcher
+    BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    # Symlink for logstash
+    ln -sfn "$BASE_DIR/containerlab/ospf01/watcher/logs" "$BASE_DIR/watcher"
+    
+    # Ask user for host IP. Communication between containers using 127.0.0.1 doesn't work
+    while true; do
+        read -rp "Enter the host IP address where Docker is hosted: " HOST_IP
+        if [[ -n "$HOST_IP" ]]; then
+            break
+        else
+            echo "Host IP cannot be empty. Please try again."
+        fi
+    done
+
+    # Replace TOPOLOGRAPH_HOST in .env
+    if [[ -f .env ]]; then
+        sed -i "s/^TOPOLOGRAPH_HOST=.*/TOPOLOGRAPH_HOST=${HOST_IP}/" .env
+        sed -i "s/^WEBHOOK_URL=.*/WEBHOOK_URL=${HOST_IP}/" .env
+        sed -i 's/^DEBUG_BOOL=False/DEBUG_BOOL=True/' .env
+        echo "[$(date)] DEBUG_BOOL set to True in .env"
     fi
-    SUMMARY+=("OSPF Watcher deployed from $(basename "$watcher_folder")")
+
+    echo "[$(date)] start local clab"
+    sudo clab deploy --topo containerlab/ospf01/ospf01.clab.yml
+    check_mark "Local clab has been successfully started."
+    SUMMARY+=("OSPF Watcher lab deployed with Containerlab")
   else
-    echo "Error: config.yml not found in $watcher_folder"
-    exit 1
+    # If symlink exists, remove it and restart docker-compose
+    if [[ -L ./watcher/logs ]]; then
+        echo "[$(date)] Removing existing watcher/logs symlink to avoid conflicts"
+        unlink ./watcher/logs
+        echo "[$(date)] Restarting Docker Compose for affected services..."
+        # Optionally, you can specify the services if you don't want all
+        docker compose down
+        docker compose up -d
+
+        echo "[$(date)] Docker Compose restarted successfully."
+    fi
+    generate_watcher_configs "ospf"
+    echo "Run on network device mode (no lab auto-deploy)."
   fi
+
+  if ! check_container_running ospf-logstash; then
+    sudo $DOCKER_COMPOSE build
+    sudo $DOCKER_COMPOSE up -d
+    SUMMARY+=("Logstash to export OSPF Watcher logs started")
+  fi
+
   cd ..
 }
 
@@ -280,22 +297,23 @@ start_isiswatcher() {
   fi
 
   cd isiswatcher || exit
-  generate_watcher_configs "isis"
-  watcher_folder=$(select_watcher_folder)
 
-  echo "Deploying watcher from folder: '$(basename "$watcher_folder")'"
-  if [[ -f "$watcher_folder/config.yml" ]]; then
-    sudo clab deploy --topo "$watcher_folder/config.yml"
-    if ! check_container_running isis-logstash; then
-      sudo $DOCKER_COMPOSE build
-      sudo $DOCKER_COMPOSE up -d
-      SUMMARY+=("Logstash to export ISIS Watcher logs started")
-    fi
-    SUMMARY+=("ISIS Watcher deployed from $(basename "$watcher_folder")")
+  if [[ "$DEPLOY_ISIS_CLAB" == true ]]; then
+    ln -sfn containerlab/isis01/watcher/logs watcher/logs
+    ./containerlab/isis01/prepare.sh
+    sudo clab deploy --topo containerlab/isis01/isis01.clab.yml
+    SUMMARY+=("ISIS Watcher lab deployed with Containerlab")
   else
-    echo "Error: config.yml not found in $watcher_folder"
-    exit 1
+    generate_watcher_configs "isis"
+    echo "Run on network device mode (no lab auto-deploy)."
   fi
+
+  if ! check_container_running isis-logstash; then
+    sudo $DOCKER_COMPOSE build
+    sudo $DOCKER_COMPOSE up -d
+    SUMMARY+=("Logstash to export ISIS Watcher logs started")
+  fi
+
   cd ..
 }
 
