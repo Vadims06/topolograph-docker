@@ -221,6 +221,7 @@ start_topolograph() {
 
 start_ospfwatcher() {
   echo -e "\n${GREEN}=== Starting OSPF Watcher ===${NC}"
+  BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   if [[ ! -d "$BASE_DIR/ospfwatcher" ]]; then
     echo "[$(date)] Cloning ospfwatcher repository..."
     git clone https://github.com/Vadims06/ospfwatcher.git ospfwatcher
@@ -290,8 +291,11 @@ start_ospfwatcher() {
 
 start_isiswatcher() {
   echo -e "\n${GREEN}=== Starting ISIS Watcher ===${NC}"
-  if git clone https://github.com/Vadims06/isiswatcher.git isiswatcher >/dev/null 2>&1; then
-    check_mark "ISIS Watcher repository cloned."
+  BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  if [[ ! -d "$BASE_DIR/isiswatcher" ]]; then
+    echo "[$(date)] Cloning isiswatcher repository..."
+    git clone https://github.com/Vadims06/isiswatcher.git isiswatcher
+    check_mark "OSPF Watcher repository cloned."
   else
     cross_mark "ISIS Watcher repository exists or failed to clone."
   fi
@@ -299,11 +303,49 @@ start_isiswatcher() {
   cd isiswatcher || exit
 
   if [[ "$DEPLOY_ISIS_CLAB" == true ]]; then
-    ln -sfn containerlab/isis01/watcher/logs watcher/logs
+    echo "[$(date)] start prepairing clab"
     ./containerlab/isis01/prepare.sh
+    check_mark "Local clab prepaired."
+    # create expected folder for watcher logs
+    mkdir -p ./watcher
+    BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    # Symlink for logstash
+    ln -sfn "$BASE_DIR/containerlab/isis01/watcher/logs" "$BASE_DIR/watcher"
+    
+    # Ask user for host IP. Communication between containers using 127.0.0.1 doesn't work
+    while true; do
+        read -rp "Enter the host IP address where Docker is hosted: " HOST_IP
+        if [[ -n "$HOST_IP" ]]; then
+            break
+        else
+            echo "Host IP cannot be empty. Please try again."
+        fi
+    done
+
+    # Replace TOPOLOGRAPH_HOST in .env
+    if [[ -f .env ]]; then
+        sed -i "s/^TOPOLOGRAPH_HOST=.*/TOPOLOGRAPH_HOST=${HOST_IP}/" .env
+        sed -i "s/^WEBHOOK_URL=.*/WEBHOOK_URL=${HOST_IP}/" .env
+        sed -i 's/^DEBUG_BOOL=False/DEBUG_BOOL=True/' .env
+        echo "[$(date)] DEBUG_BOOL set to True in .env"
+    fi
+
+    echo "[$(date)] start local clab"
     sudo clab deploy --topo containerlab/isis01/isis01.clab.yml
-    SUMMARY+=("ISIS Watcher lab deployed with Containerlab")
+    check_mark "Local clab has been successfully started."
+    SUMMARY+=("IS-IS Watcher lab deployed with Containerlab")
   else
+    # If symlink exists, remove it and restart docker-compose
+    if [[ -L ./watcher/logs ]]; then
+        echo "[$(date)] Removing existing watcher/logs symlink to avoid conflicts"
+        unlink ./watcher/logs
+        echo "[$(date)] Restarting Docker Compose for affected services..."
+        # Optionally, you can specify the services if you don't want all
+        docker compose down
+        docker compose up -d
+
+        echo "[$(date)] Docker Compose restarted successfully."
+    fi
     generate_watcher_configs "isis"
     echo "Run on network device mode (no lab auto-deploy)."
   fi
