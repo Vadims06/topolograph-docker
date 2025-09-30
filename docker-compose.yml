@@ -47,21 +47,19 @@ services:
       - backend
 
   webserver:
-    image: nginx:latest
+    build:
+      context: webserver
+      dockerfile: Dockerfile
     container_name: webserver
     restart: unless-stopped
-    command:  ["nginx", "-g", "daemon off;"]
     environment:
-      NGINX_PORT: 8080
+      TOPOLOGRAPH_PORT: ${TOPOLOGRAPH_PORT:-8080}
     ports:
-      - "$TOPOLOGRAPH_PORT:8080"
+      - "${TOPOLOGRAPH_PORT:-8080}:${TOPOLOGRAPH_PORT:-8080}"
     volumes:
       - type: volume
         source: nginxdata
         target: /var/log/nginx
-      - type: bind
-        source: ./webserver/templates/app.conf.template
-        target: /etc/nginx/templates/app.conf.template
     depends_on:
       - flask
     networks:
