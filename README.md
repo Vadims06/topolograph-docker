@@ -23,6 +23,18 @@ sudo ./install.sh
 The Topolograph site will be available after a few minutes.
 Open the URL `http://localhost:8080/` in a web-browser.
 
+## MCP Server Integration
+
+This Docker setup includes an MCP (Model Context Protocol) server that enables AI agents and Large Language Models to interact with the Topolograph API for network analysis. The MCP server is available at `http://localhost:8000/mcp` and provides tools for:
+
+- Network topology analysis
+- OSPF/IS-IS event monitoring
+- Path calculation and backup path analysis
+- Graph status and connectivity monitoring
+- Node and edge queries
+
+The MCP server automatically connects to the Flask API and supports authentication via API tokens.
+
 ## Variables
 The application's variables are grouped in .env file
 * TOPOLOGRAPH_PORT - the application port
@@ -33,7 +45,8 @@ TOPOLOGRAPH_PORT=8080 <-- whatever you want, and then open the URL http://localh
 * DNS - accepts IP address of DNS server in order to resolve OSPF RID and show device names on a graph
 ~~* NETBOX_URL, NETBOX_RO_TOKEN - resolves device's hostname in Netbox, assigns devices by groups~~  
 * TOPOLOGRAPH_WEB_API_USERNAME_EMAIL, TOPOLOGRAPH_WEB_API_PASSWORD - credentials for API requests  
-* TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS - whitelistening IP sources of API requests  
+* TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS - whitelistening IP sources of API requests
+* MCP_PORT - MCP server port (default: 8000)  
 
 ## Default credentials
 In order to create the user with password from `.env` file and add your networks in allow list (authorised networks) from `TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS` variable - run this request  

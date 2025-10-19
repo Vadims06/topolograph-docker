@@ -46,6 +46,18 @@ services:
     networks:
       - backend
 
+  mcp-server:
+    image: vadims06/topolograph-mcp-server:v1.0.0
+    container_name: mcp-server
+    restart: unless-stopped
+    environment:
+      # MCP uses token authentication comming from Agent requests
+      TOPOLOGRAPH_API_BASE: "http://flask:5000/api" # "http://192.168.0.33:5000/api"
+    ports:
+      - "${MCP_PORT:-8000}:8000"
+    networks:
+      - frontend
+
   webserver:
     build:
       context: webserver
@@ -54,6 +66,7 @@ services:
     restart: unless-stopped
     environment:
       TOPOLOGRAPH_PORT: ${TOPOLOGRAPH_PORT:-8080}
+      MCP_PORT: ${MCP_PORT:-8000}
     ports:
       - "${TOPOLOGRAPH_PORT:-8080}:${TOPOLOGRAPH_PORT:-8080}"
     volumes:
@@ -62,6 +75,7 @@ services:
         target: /var/log/nginx
     depends_on:
       - flask
+      - mcp-server
     networks:
       - frontend
 
