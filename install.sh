@@ -204,6 +204,63 @@ generate_watcher_configs() {
     vadims06/${protocol}-watcher:latest python3 ./client.py --action add_watcher
 }
 
+detect_watcher_number() {
+  local protocol=$1
+  local watcher_dir="./watcher"
+  
+  # Find directories matching pattern watcher<number>-bgpls-<protocol>
+  # or watcher<number> (for backward compatibility)
+  local watcher_dirs=$(find "$watcher_dir" -maxdepth 1 -type d -name "watcher*-bgpls-${protocol}" 2>/dev/null | sort -V)
+  
+  if [[ -z "$watcher_dirs" ]]; then
+    # Try alternative pattern without bgpls
+    watcher_dirs=$(find "$watcher_dir" -maxdepth 1 -type d -name "watcher*" 2>/dev/null | sort -V)
+  fi
+  
+  if [[ -z "$watcher_dirs" ]]; then
+    echo ""
+    return 1
+  fi
+  
+  # Get the most recently created/modified watcher directory
+  local latest_watcher=$(echo "$watcher_dirs" | tail -1)
+  
+  # Extract watcher number from directory name
+  # Pattern: watcher<number> or watcher<number>-bgpls-<protocol>
+  if [[ "$latest_watcher" =~ watcher([0-9]+) ]]; then
+    echo "${BASH_REMATCH[1]}"
+    return 0
+  fi
+  
+  echo ""
+  return 1
+}
+
+ask_and_start_watcher() {
+  local protocol=$1
+  local protocol_upper="${protocol^^}"
+  
+  echo "Run on network device mode (no lab auto-deploy)."
+  
+  # Ask if user wants to start the watcher
+  read -rp "Do you want to start the watcher? [n/Y]: " start_watcher
+  if [[ "$start_watcher" =~ ^[Yy]$ ]] || [[ -z "$start_watcher" ]]; then
+    WATCHER_NUM=$(detect_watcher_number "$protocol")
+    if [[ -n "$WATCHER_NUM" ]]; then
+      echo "[$(date)] Starting ${protocol_upper} watcher $WATCHER_NUM with Containerlab..."
+      if [[ -f "./watcher/watcher${WATCHER_NUM}-bgpls-${protocol}/config.yml" ]]; then
+        sudo clab deploy --topo "./watcher/watcher${WATCHER_NUM}-bgpls-${protocol}/config.yml"
+        check_mark "${protocol_upper} Watcher $WATCHER_NUM deployed with Containerlab"
+        SUMMARY+=("${protocol_upper} Watcher $WATCHER_NUM deployed with Containerlab")
+      else
+        cross_mark "Watcher config file not found: ./watcher/watcher${WATCHER_NUM}-bgpls-${protocol}/config.yml"
+      fi
+    else
+      cross_mark "Could not detect watcher number. Please check watcher directory."
+    fi
+  fi
+}
+
 # ---------- STARTERS ----------
 
 start_topolograph() {
@@ -277,7 +334,7 @@ start_ospfwatcher() {
         echo "[$(date)] Docker Compose restarted successfully."
     fi
     generate_watcher_configs "ospf"
-    echo "Run on network device mode (no lab auto-deploy)."
+    ask_and_start_watcher "ospf"
   fi
 
   if ! check_container_running ospf-logstash; then
@@ -295,7 +352,7 @@ start_isiswatcher() {
   if [[ ! -d "$BASE_DIR/isiswatcher" ]]; then
     echo "[$(date)] Cloning isiswatcher repository..."
     git clone https://github.com/Vadims06/isiswatcher.git isiswatcher
-    check_mark "OSPF Watcher repository cloned."
+    check_mark "ISIS Watcher repository cloned."
   else
     cross_mark "ISIS Watcher repository exists or failed to clone."
   fi
@@ -347,7 +404,7 @@ start_isiswatcher() {
         echo "[$(date)] Docker Compose restarted successfully."
     fi
     generate_watcher_configs "isis"
-    echo "Run on network device mode (no lab auto-deploy)."
+    ask_and_start_watcher "isis"
   fi
 
   if ! check_container_running isis-logstash; then
