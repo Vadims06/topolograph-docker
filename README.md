@@ -41,9 +41,7 @@ The application's variables are grouped in .env file
 ```
 TOPOLOGRAPH_PORT=8080 <-- whatever you want, and then open the URL http://localhost:8080/ after re-runing docker-compose up -d
 ```  
-* NAPALM_USERNAME, NAPALM_PASSWORD - credentials for Napalm methods in order to login to network device and get OSPF LSDB
 * DNS - accepts IP address of DNS server in order to resolve OSPF RID and show device names on a graph
-~~* NETBOX_URL, NETBOX_RO_TOKEN - resolves device's hostname in Netbox, assigns devices by groups~~  
 * TOPOLOGRAPH_WEB_API_USERNAME_EMAIL, TOPOLOGRAPH_WEB_API_PASSWORD - credentials for API requests  
 * TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS - whitelistening IP sources of API requests
 * MCP_PORT - MCP server port (default: 8000)  
@@ -58,6 +56,12 @@ res.json()
 {'errors': '', 'status': 'ok'}
 ```
 To test that it works - Open `http://localhost:8080/` in a web-browser, go to `Login/Local login`, use `TOPOLOGRAPH_WEB_API_USERNAME_EMAIL` and `TOPOLOGRAPH_WEB_API_PASSWORD` to login. `API/Authorised source IP ranges` Tab should list your IP ranges.
+
+## Integration with other systems
+
+### NetBox
+
+Hostname mapping can be updated from NetBox via the [Topolograph SDK](https://github.com/Vadims06/topolograph-sdk) or direct API calls. For example, you can query NetBox for device hostnames and push them to Topolograph using the SDK's node-update methods, keeping topology labels in sync with your source of truth.
 
 ## About
 You can find more info about Topolograph here: https://github.com/Vadims06/topolograph
