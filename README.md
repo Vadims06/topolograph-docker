@@ -6,6 +6,7 @@ To get Topolograph Docker up and running run the following commands.
 ```bash
 git clone https://github.com/Vadims06/topolograph-docker.git
 cd topolograph-docker
+cp env.example .env
 docker-compose pull
 docker-compose up -d
 ```
