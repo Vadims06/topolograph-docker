@@ -270,6 +270,10 @@ start_topolograph() {
   else
     git clone https://github.com/Vadims06/topolograph-docker.git topolograph || true
     cd topolograph
+    if [[ ! -f .env ]]; then
+      cp env.example .env
+      check_mark ".env created from env.example"
+    fi
     $DOCKER_COMPOSE up -d
     cd ..
   fi
