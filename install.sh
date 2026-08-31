@@ -168,14 +168,16 @@ ask_installation_options() {
   echo -e "Select components to install:"
   echo "  1) OSPF Watcher"
   echo "  2) ISIS Watcher"
-  echo "  3) Both"
-  echo "  4) Do not install anything"
-  read -rp "Enter your choice (1-4): " choice
+  echo "  3) BMP Watcher (BGP)"
+  echo "  4) OSPF + ISIS"
+  echo "  5) Do not install anything"
+  read -rp "Enter your choice (1-5): " choice
   case $choice in
     1) INSTALL_OSPF=true; ask_deployment_mode "ospf";;
     2) INSTALL_ISIS=true; ask_deployment_mode "isis";;
-    3) INSTALL_OSPF=true; ask_deployment_mode "ospf"; INSTALL_ISIS=true; ask_deployment_mode "isis";;
-    4) echo "No components selected for installation.";;
+    3) INSTALL_BMP=true;;
+    4) INSTALL_OSPF=true; ask_deployment_mode "ospf"; INSTALL_ISIS=true; ask_deployment_mode "isis";;
+    5) echo "No components selected for installation.";;
     *) echo "Invalid choice"; exit 1;;
   esac
 }
@@ -259,6 +261,33 @@ ask_and_start_watcher() {
       cross_mark "Could not detect watcher number. Please check watcher directory."
     fi
   fi
+}
+
+print_bmpwatcher_instructions() {
+  # bmpwatcher is not a pull-and-run image: it has a local gobmp patch, so the
+  # binary is host-built and the image built from it. Routers dial in over BMP,
+  # so it also cannot be a compose sidecar here. Print the steps rather than
+  # pretend to automate them.
+  cat <<'EOF'
+
+BMP Watcher (BGP) — set up next to your routers, not in this compose stack.
+
+  git clone https://github.com/Vadims06/bmpwatcher.git && cd bmpwatcher
+  CGO_ENABLED=0 go build -o bmpwatcher .
+  docker build -t bmpwatcher .
+  export TOPOLOGRAPH_API_TOKEN=sk-...        # Topolograph: Settings -> API Tokens
+  docker run -d --name bmpwatcher -p 11019:11019 \
+    -v /var/log/bmpwatcher:/var/log/bmpwatcher bmpwatcher \
+    --bmp-port=11019 --source-id=pe1 \
+    --events=/var/log/bmpwatcher/events.jsonl \
+    --topology-file=/var/log/bmpwatcher/topology.json \
+    --topolograph-topology-url=http://<this-host>:${TOPOLOGRAPH_PORT:-8080}/api/watcher/bgp
+
+Then configure BMP on each router to connect to this host:11019 and run one
+bmpwatcher per speaker. Router config and the Fluent Bit event shipper are in
+the bmpwatcher README: https://github.com/Vadims06/bmpwatcher
+EOF
+  SUMMARY+=("BMP Watcher: printed setup instructions (manual, runs beside routers)")
 }
 
 # ---------- STARTERS ----------
@@ -449,6 +478,9 @@ main() {
   fi
   if [[ "$INSTALL_ISIS" == true ]]; then
     start_isiswatcher
+  fi
+  if [[ "$INSTALL_BMP" == true ]]; then
+    print_bmpwatcher_instructions
   fi
   fix_ownership
   print_summary

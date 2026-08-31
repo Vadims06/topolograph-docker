@@ -24,12 +24,22 @@ sudo ./install.sh
 The Topolograph site will be available after a few minutes.
 Open the URL `http://localhost:8080/` in a web-browser.
 
+## Watchers
+
+`install.sh` sets up the OSPF and IS-IS watchers (GRE or BGP-LS) as
+containerlab labs. The **BMP Watcher** for the BGP control plane runs beside
+your routers rather than in this compose stack, since routers dial in to it
+over BMP; choose it in `install.sh` for the setup steps, or see the
+[bmpwatcher README](https://github.com/Vadims06/bmpwatcher). To try the BGP
+view without any of this, open Topolograph — the generated BGP demo topology
+loads on first visit; walkthrough at `https://topolograph.com/how-to/bgp`.
+
 ## MCP Server Integration
 
 This Docker setup includes an MCP (Model Context Protocol) server that enables AI agents and Large Language Models to interact with the Topolograph API for network analysis. The MCP server is available at `http://localhost:8000/mcp` and provides tools for:
 
 - Network topology analysis
-- OSPF/IS-IS event monitoring
+- OSPF/IS-IS/BGP event monitoring
 - Path calculation and backup path analysis
 - Graph status and connectivity monitoring
 - Node and edge queries
