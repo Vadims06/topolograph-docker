@@ -264,28 +264,26 @@ ask_and_start_watcher() {
 }
 
 print_bmpwatcher_instructions() {
-  # bmpwatcher is not a pull-and-run image: it has a local gobmp patch, so the
-  # binary is host-built and the image built from it. Routers dial in over BMP,
-  # so it also cannot be a compose sidecar here. Print the steps rather than
-  # pretend to automate them.
-  cat <<'EOF'
+  # bmpwatcher has a local gobmp patch, so the binary is host-built and the
+  # image built from it, and it runs next to the routers rather than in this
+  # compose stack. Its own repo ships a compose file for it. Print the steps.
+  cat <<EOF
 
-BMP Watcher (BGP) — set up next to your routers, not in this compose stack.
+BMP Watcher (BGP) — runs next to your routers, not in this compose stack.
 
   git clone https://github.com/Vadims06/bmpwatcher.git && cd bmpwatcher
-  CGO_ENABLED=0 go build -o bmpwatcher .
-  docker build -t bmpwatcher .
-  export TOPOLOGRAPH_API_TOKEN=sk-...        # Topolograph: Settings -> API Tokens
-  docker run -d --name bmpwatcher -p 11019:11019 \
-    -v /var/log/bmpwatcher:/var/log/bmpwatcher bmpwatcher \
-    --bmp-port=11019 --source-id=pe1 \
-    --events=/var/log/bmpwatcher/events.jsonl \
-    --topology-file=/var/log/bmpwatcher/topology.json \
-    --topolograph-topology-url=http://<this-host>:${TOPOLOGRAPH_PORT:-8080}/api/watcher/bgp
+  CGO_ENABLED=0 go build -o bmpwatcher . && docker build -t bmpwatcher:latest .
 
-Then configure BMP on each router to connect to this host:11019 and run one
-bmpwatcher per speaker. Router config and the Fluent Bit event shipper are in
-the bmpwatcher README: https://github.com/Vadims06/bmpwatcher
+  cd fluentbit && cp .env.example .env
+    # set TOPOLOGRAPH_API_TOKEN (Topolograph: Settings -> API Tokens), SOURCE_ID,
+    # LABS_DIR, and for this self-hosted instance:
+    #   TOPOLOGRAPH_TOPOLOGY_URL=http://<this-host>:${TOPOLOGRAPH_PORT:-8080}/api/watcher/bgp
+  docker compose --profile collector up -d
+    # starts bmpwatcher + the Fluent Bit event shipper, restart: unless-stopped
+
+Then configure BMP on each router to dial this host:11019, one bmpwatcher per
+speaker. Router config and a no-Docker systemd unit are in the bmpwatcher
+README: https://github.com/Vadims06/bmpwatcher
 EOF
   SUMMARY+=("BMP Watcher: printed setup instructions (manual, runs beside routers)")
 }
