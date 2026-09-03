@@ -264,26 +264,27 @@ ask_and_start_watcher() {
 }
 
 print_bmpwatcher_instructions() {
-  # bmpwatcher has a local gobmp patch, so the binary is host-built and the
-  # image built from it, and it runs next to the routers rather than in this
-  # compose stack. Its own repo ships a compose file for it. Print the steps.
+  # bmpwatcher runs next to the routers rather than in this compose stack. The
+  # image is pulled, not built; its own repo ships the compose file. Print the
+  # steps.
   cat <<EOF
 
 BMP Watcher (BGP) — runs next to your routers, not in this compose stack.
 
-  git clone https://github.com/Vadims06/bmpwatcher.git && cd bmpwatcher
-  CGO_ENABLED=0 go build -o bmpwatcher . && docker build -t bmpwatcher:latest .
-
-  cd fluentbit && cp .env.example .env
-    # set TOPOLOGRAPH_API_TOKEN (Topolograph: Settings -> API Tokens), SOURCE_ID,
+  docker pull vadims06/bmpwatcher:latest
+  git clone https://github.com/Vadims06/bmpwatcher.git && cd bmpwatcher/fluentbit
+  cp .env.example .env
+    # set TOPOLOGRAPH_API_TOKEN (Topolograph: Token Management), SOURCE_ID,
     # LABS_DIR, and for this self-hosted instance:
-    #   TOPOLOGRAPH_TOPOLOGY_URL=http://<this-host>:${TOPOLOGRAPH_PORT:-8080}/api/watcher/bgp
+    #   TOPOLOGRAPH_HOST=<this-host-ip>   (this Docker host's own address, not localhost)
+    #   TOPOLOGRAPH_PORT=${TOPOLOGRAPH_PORT:-8080}
   docker compose --profile collector up -d
     # starts bmpwatcher + the Fluent Bit event shipper, restart: unless-stopped
 
-Then configure BMP on each router to dial this host:11019, one bmpwatcher per
-speaker. Router config and a no-Docker systemd unit are in the bmpwatcher
-README: https://github.com/Vadims06/bmpwatcher
+Then configure BMP on each router to dial this host:11019. To try it first,
+../containerlab/bmp01 is a self-contained lab. Router config and a no-Docker
+systemd unit are in the bmpwatcher README:
+https://github.com/Vadims06/bmpwatcher
 EOF
   SUMMARY+=("BMP Watcher: printed setup instructions (manual, runs beside routers)")
 }
