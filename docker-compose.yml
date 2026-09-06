@@ -47,7 +47,7 @@ services:
       - backend
 
   mcp-server:
-    image: vadims06/topolograph-mcp-server:v1.0.0
+    image: vadims06/topolograph-mcp-server:latest
     container_name: mcp-server
     restart: unless-stopped
     environment:
