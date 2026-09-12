@@ -28,6 +28,35 @@ services:
       - frontend
       - backend
 
+  flask-socketio:
+    container_name: flask-socketio
+    image: vadims06/topolograph:latest
+    restart: unless-stopped
+    command: ["gunicorn", "--worker-class", "gevent", "-w", "1", "--bind", "0.0.0.0:5000", "--timeout", "90", "wsgi:app"]
+    environment:
+      APP_ENV: "prod"
+      APP_DEBUG: "False"
+      APP_PORT: 5000
+      MONGODB_DATABASE: $MONGODB_DATABASE
+      MONGODB_USERNAME: $MONGODB_USERNAME
+      MONGODB_PASSWORD: $MONGODB_PASSWORD
+      MONGODB_HOSTNAME: $MONGODB_HOSTNAME
+      NAPALM_USERNAME: $NAPALM_USERNAME
+      NAPALM_PASSWORD: $NAPALM_PASSWORD
+      NAPALM_PORT: $NAPALM_PORT
+      DNS: $DNS
+      NETBOX_URL: $NETBOX_URL
+      NETBOX_RO_TOKEN : $NETBOX_RO_TOKEN
+      TOPOLOGRAPH_WEB_API_USERNAME_EMAIL: $TOPOLOGRAPH_WEB_API_USERNAME_EMAIL
+      TOPOLOGRAPH_WEB_API_PASSWORD: $TOPOLOGRAPH_WEB_API_PASSWORD
+      TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS: $TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS
+      SWAGGER_HOST: 'localhost:$TOPOLOGRAPH_PORT'
+    depends_on:
+      - mongodb
+    networks:
+      - frontend
+      - backend
+
   mongodb:
     image: mongo:4.2 # Upgrade to 4.2 First, Then to 4.4.29
     container_name: mongodb
@@ -75,6 +104,7 @@ services:
         target: /var/log/nginx
     depends_on:
       - flask
+      - flask-socketio
       - mcp-server
     networks:
       - frontend
