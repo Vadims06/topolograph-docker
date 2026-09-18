@@ -22,6 +22,9 @@ services:
       TOPOLOGRAPH_WEB_API_PASSWORD: $TOPOLOGRAPH_WEB_API_PASSWORD
       TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS: $TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS
       SWAGGER_HOST: 'localhost:$TOPOLOGRAPH_PORT'
+      # No page served by a self-hosted instance loads Google Analytics
+      # or Yandex Metrika unless this is switched on. See env.example.
+      ENABLE_ANALYTICS: ${ENABLE_ANALYTICS:-false}
     depends_on:
       - mongodb
     networks:
@@ -51,6 +54,9 @@ services:
       TOPOLOGRAPH_WEB_API_PASSWORD: $TOPOLOGRAPH_WEB_API_PASSWORD
       TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS: $TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS
       SWAGGER_HOST: 'localhost:$TOPOLOGRAPH_PORT'
+      # No page served by a self-hosted instance loads Google Analytics
+      # or Yandex Metrika unless this is switched on. See env.example.
+      ENABLE_ANALYTICS: ${ENABLE_ANALYTICS:-false}
     depends_on:
       - mongodb
     networks:

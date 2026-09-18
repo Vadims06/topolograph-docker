@@ -56,6 +56,7 @@ TOPOLOGRAPH_PORT=8080 <-- whatever you want, and then open the URL http://localh
 * TOPOLOGRAPH_WEB_API_USERNAME_EMAIL, TOPOLOGRAPH_WEB_API_PASSWORD - credentials for API requests  
 * TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS - whitelistening IP sources of API requests
 * MCP_PORT - MCP server port (default: 8000)  
+* ENABLE_ANALYTICS - `false` by default. This deployment loads no Google Analytics and no Yandex Metrika: the counters in the page templates belong to the public topolograph.com instance, and a self-hosted instance keeps them switched off. Set it to `true` only if you deliberately want your pages reported to them.
 
 ## Default credentials
 In order to create the user with password from `.env` file and add your networks in allow list (authorised networks) from `TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS` variable - run this request  
