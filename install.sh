@@ -271,20 +271,20 @@ print_bmpwatcher_instructions() {
 
 BMP Watcher (BGP) — runs next to your routers, not in this compose stack.
 
-  docker pull vadims06/bmpwatcher:latest
-  git clone https://github.com/Vadims06/bmpwatcher.git && cd bmpwatcher/fluentbit
+  git clone https://github.com/Vadims06/bmpwatcher.git && cd bmpwatcher
   cp .env.example .env
-    # set TOPOLOGRAPH_API_TOKEN (Topolograph: Token Management), SOURCE_ID,
-    # LABS_DIR, and for this self-hosted instance:
+    # set TOPOLOGRAPH_API_TOKEN (Topolograph: API -> Token -> Create Token),
+    # SOURCE_ID, and for this self-hosted instance:
     #   TOPOLOGRAPH_HOST=<this-host-ip>   (this Docker host's own address, not localhost)
     #   TOPOLOGRAPH_PORT=${TOPOLOGRAPH_PORT:-8080}
+    #   WEBHOOK_TLS_ON=off
   docker compose --profile collector up -d
-    # starts bmpwatcher + the Fluent Bit event shipper, restart: unless-stopped
+    # starts the vadims06/bmpwatcher collector and the Fluent Bit event
+    # shipper, restart: unless-stopped
 
-Then configure BMP on each router to dial this host:11019. To try it first,
-../containerlab/bmp01 is a self-contained lab. Router config and a no-Docker
-systemd unit are in the bmpwatcher README:
-https://github.com/Vadims06/bmpwatcher
+Then point BMP on each router to this host:11019. To try it first,
+containerlab/13-hosts-demo-bgp in the bmpwatcher repo is a ready lab.
+Router configuration: https://github.com/Vadims06/bmpwatcher
 EOF
   SUMMARY+=("BMP Watcher: printed setup instructions (manual, runs beside routers)")
 }
