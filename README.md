@@ -53,6 +53,7 @@ The application's variables are grouped in .env file
 TOPOLOGRAPH_PORT=8080 <-- whatever you want, and then open the URL http://localhost:8080/ after re-runing docker-compose up -d
 ```  
 * DNS - accepts IP address of DNS server in order to resolve OSPF RID and show device names on a graph
+* DNS_LOOKUP_DEADLINE_SEC - max seconds an upload waits for DNS names (default: 5). Nodes not resolved in time keep their IP as a label
 * TOPOLOGRAPH_WEB_API_USERNAME_EMAIL, TOPOLOGRAPH_WEB_API_PASSWORD - credentials for API requests  
 * TOPOLOGRAPH_WEB_API_AUTHORISED_NETWORKS - whitelistening IP sources of API requests
 * MCP_PORT - MCP server port (default: 8000)  
