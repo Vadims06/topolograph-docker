@@ -300,6 +300,8 @@ start_topolograph() {
     cd topolograph
     if [[ ! -f .env ]]; then
       cp env.example .env
+      # A fresh database gets its own password instead of the published default.
+      sed -i "s/^MONGODB_PASSWORD=.*/MONGODB_PASSWORD=$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \\n')/" .env
       check_mark ".env created from env.example"
     fi
     $DOCKER_COMPOSE up -d
