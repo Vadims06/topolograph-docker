@@ -1,5 +1,5 @@
 # topolograph-docker
-This repository runs the Community edition of Topolograph: free and self-hosted, the same product as https://topolograph.com. It covers LSDB snapshot upload, the network graph, paths, failure what-if, MPLS TE CSPF, BGP/EVPN analysis of uploaded data, the REST API, the SDK and MCP. Enterprise adds watchers (collectors) that feed Topolograph, event history and timeline, SSO, roles, audit and priority support. Comparison and contact: https://topolograph.com/#editions.
+This repository runs the Community edition of Topolograph: free and self-hosted, the same product as https://topolograph.com. It covers LSDB snapshot upload, the network graph, paths, failure what-if, MPLS TE CSPF, the REST API, the SDK and MCP. Enterprise adds watchers (collectors) that feed Topolograph, BGP and EVPN routes over BMP, event history and timeline, SSO, roles, audit and priority support. Comparison and contact: https://topolograph.com/#editions.
 
 ![Topolograph graph](https://raw.githubusercontent.com/Vadims06/topolograph/master/docs/static/ui/graph-overview.png)
 
