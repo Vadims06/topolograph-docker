@@ -1,4 +1,8 @@
 # topolograph-docker
+This repository runs the Community edition of Topolograph: free and self-hosted, the same product as https://topolograph.com. It covers LSDB snapshot upload, the network graph, paths, failure what-if, MPLS TE CSPF, BGP/EVPN analysis of uploaded data, the REST API, the SDK and MCP. Enterprise adds watchers (collectors) that feed Topolograph, event history and timeline, SSO, roles, audit and priority support. Comparison and contact: https://topolograph.com/#editions.
+
+![Topolograph graph](https://raw.githubusercontent.com/Vadims06/topolograph/master/docs/static/ui/graph-overview.png)
+
 ## Quickstart
 Install Docker Desktop for Windows/Mac
 To get Topolograph Docker up and running run the following commands.
@@ -24,7 +28,11 @@ sudo ./install.sh
 The Topolograph site will be available after a few minutes.
 Open the URL `http://localhost:8080/` in a web-browser.
 
+![Upload an LSDB](https://raw.githubusercontent.com/Vadims06/topolograph/master/docs/static/ui/upload-lsdb.png)
+
 ## Watchers
+
+Watchers that feed Topolograph with live events are an Enterprise feature, see [editions](https://topolograph.com/#editions). The watcher projects themselves stay free and open source and also run without Topolograph (text logs, ELK, Zabbix, Loki, webhooks); that path sends nothing to Topolograph: [ospfwatcher](https://github.com/Vadims06/ospfwatcher), [isiswatcher](https://github.com/Vadims06/isiswatcher), [bmpwatcher](https://github.com/Vadims06/bmpwatcher).
 
 `install.sh` sets up the OSPF and IS-IS watchers (GRE or BGP-LS) as
 containerlab labs. The **BMP Watcher** for the BGP control plane runs beside
@@ -43,6 +51,8 @@ This Docker setup includes an MCP (Model Context Protocol) server that enables A
 - Path calculation and backup path analysis
 - Graph status and connectivity monitoring
 - Node and edge queries
+
+Tools that read watcher events or event history need Enterprise data; the other tools work on uploaded graphs.
 
 The MCP server automatically connects to the Flask API and supports authentication via API tokens.
 
