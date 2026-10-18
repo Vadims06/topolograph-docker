@@ -35,24 +35,11 @@ install_docker_ubuntu() {
   check_mark "Docker installed (Ubuntu)"
 }
 
-install_clab() {
-  echo "Installing Containerlab..."
-  bash -c "$(curl -sL https://get.containerlab.dev)"
-  check_mark "Containerlab installed"
-}
-
 install_git() {
   echo "Installing Git..."
   sudo apt-get update
   sudo apt-get install -y git
   check_mark "Git installed"
-}
-
-install_conntrack() {
-  echo "Installing conntrack..."
-  sudo apt-get update
-  sudo apt-get install -y conntrack
-  check_mark "Conntrack installed"
 }
 
 # ---------- CHECKERS ----------
@@ -83,27 +70,11 @@ check_docker_compose_cmd() {
   fi
 }
 
-check_clab_installed() {
-  if ! command -v clab &>/dev/null; then
-    install_clab
-  else
-    check_mark "Containerlab is installed"
-  fi
-}
-
 check_git_installed() {
   if ! command -v git &>/dev/null; then
     install_git
   else
     check_mark "Git is installed"
-  fi
-}
-
-check_conntrack_installed() {
-  if ! command -v conntrack &>/dev/null; then
-    install_conntrack
-  else
-    check_mark "Conntrack is installed"
   fi
 }
 
@@ -120,24 +91,10 @@ check_container_running() {
 
 # ---------- CORE FUNCTIONS ----------
 
-check_topolograph_suite_state() {
-  echo "Checking Topolograph Suite Status..."
-  check_docker_installed
-  check_clab_installed
-  check_git_installed
-  check_conntrack_installed
-  check_docker_compose_cmd
-  check_container_running flask
-  check_container_running ospfwatcher
-  check_container_running isiswatcher
-}
-
 ask_installation_options() {
   echo "Checking Topolograph Suite Status..."
   check_docker_installed
-  check_clab_installed
   check_git_installed
-  check_conntrack_installed
   check_docker_compose_cmd
 
   local topolograph_missing=false
@@ -163,130 +120,6 @@ ask_installation_options() {
       exit 1
     fi
   fi
-
-  echo -e "\nWatchers are needed to listen to real network and log changes"
-  echo -e "Select components to install:"
-  echo "  1) OSPF Watcher"
-  echo "  2) ISIS Watcher"
-  echo "  3) BMP Watcher (BGP)"
-  echo "  4) OSPF + ISIS"
-  echo "  5) Do not install anything"
-  read -rp "Enter your choice (1-5): " choice
-  case $choice in
-    1) INSTALL_OSPF=true; ask_deployment_mode "ospf";;
-    2) INSTALL_ISIS=true; ask_deployment_mode "isis";;
-    3) INSTALL_BMP=true;;
-    4) INSTALL_OSPF=true; ask_deployment_mode "ospf"; INSTALL_ISIS=true; ask_deployment_mode "isis";;
-    5) echo "No components selected for installation.";;
-    *) echo "Invalid choice"; exit 1;;
-  esac
-}
-
-ask_deployment_mode() {
-  local proto=$1
-  echo -e "\nSelect deployment mode for ${proto^^} Watcher:"
-  echo "  1) Local clab"
-  echo "  2) Network device"
-  read -rp "Enter your choice (1-2): " mode
-  case $mode in
-    1) eval "DEPLOY_${proto^^}_CLAB=true";;
-    2) eval "DEPLOY_${proto^^}_NETDEV=true";;
-    *) echo "Invalid choice"; exit 1;;
-  esac
-}
-
-generate_watcher_configs() {
-  local protocol=$1
-  echo "Generating watcher configs for $protocol..."
-
-  sudo docker run -it --rm --user "$UID" \
-    -v "$(pwd):/home/watcher/watcher/" \
-    -v /etc/passwd:/etc/passwd:ro \
-    -v /etc/group:/etc/group:ro \
-    vadims06/${protocol}-watcher:latest python3 ./client.py --action add_watcher
-}
-
-detect_watcher_number() {
-  local protocol=$1
-  local watcher_dir="./watcher"
-  
-  # Find directories matching pattern watcher<number>-bgpls-<protocol>
-  # or watcher<number> (for backward compatibility)
-  local watcher_dirs=$(find "$watcher_dir" -maxdepth 1 -type d -name "watcher*-bgpls-${protocol}" 2>/dev/null | sort -V)
-  
-  if [[ -z "$watcher_dirs" ]]; then
-    # Try alternative pattern without bgpls
-    watcher_dirs=$(find "$watcher_dir" -maxdepth 1 -type d -name "watcher*" 2>/dev/null | sort -V)
-  fi
-  
-  if [[ -z "$watcher_dirs" ]]; then
-    echo ""
-    return 1
-  fi
-  
-  # Get the most recently created/modified watcher directory
-  local latest_watcher=$(echo "$watcher_dirs" | tail -1)
-  
-  # Extract watcher number from directory name
-  # Pattern: watcher<number> or watcher<number>-bgpls-<protocol>
-  if [[ "$latest_watcher" =~ watcher([0-9]+) ]]; then
-    echo "${BASH_REMATCH[1]}"
-    return 0
-  fi
-  
-  echo ""
-  return 1
-}
-
-ask_and_start_watcher() {
-  local protocol=$1
-  local protocol_upper="${protocol^^}"
-  
-  echo "Run on network device mode (no lab auto-deploy)."
-  
-  # Ask if user wants to start the watcher
-  read -rp "Do you want to start the watcher? [n/Y]: " start_watcher
-  if [[ "$start_watcher" =~ ^[Yy]$ ]] || [[ -z "$start_watcher" ]]; then
-    WATCHER_NUM=$(detect_watcher_number "$protocol")
-    if [[ -n "$WATCHER_NUM" ]]; then
-      echo "[$(date)] Starting ${protocol_upper} watcher $WATCHER_NUM with Containerlab..."
-      if [[ -f "./watcher/watcher${WATCHER_NUM}-bgpls-${protocol}/config.yml" ]]; then
-        sudo clab deploy --topo "./watcher/watcher${WATCHER_NUM}-bgpls-${protocol}/config.yml"
-        check_mark "${protocol_upper} Watcher $WATCHER_NUM deployed with Containerlab"
-        SUMMARY+=("${protocol_upper} Watcher $WATCHER_NUM deployed with Containerlab")
-      else
-        cross_mark "Watcher config file not found: ./watcher/watcher${WATCHER_NUM}-bgpls-${protocol}/config.yml"
-      fi
-    else
-      cross_mark "Could not detect watcher number. Please check watcher directory."
-    fi
-  fi
-}
-
-print_bmpwatcher_instructions() {
-  # bmpwatcher runs next to the routers rather than in this compose stack. The
-  # image is pulled, not built; its own repo ships the compose file. Print the
-  # steps.
-  cat <<EOF
-
-BMP Watcher (BGP) — runs next to your routers, not in this compose stack.
-
-  git clone https://github.com/Vadims06/bmpwatcher.git && cd bmpwatcher
-  cp .env.example .env
-    # set TOPOLOGRAPH_API_TOKEN (Topolograph: API -> Token -> Create Token),
-    # SOURCE_ID, and for this self-hosted instance:
-    #   TOPOLOGRAPH_HOST=<this-host-ip>   (this Docker host's own address, not localhost)
-    #   TOPOLOGRAPH_PORT=${TOPOLOGRAPH_PORT:-8080}
-    #   WEBHOOK_TLS_ON=off
-  docker compose --profile collector up -d
-    # starts the vadims06/bmpwatcher collector and the Fluent Bit event
-    # shipper, restart: unless-stopped
-
-Then point BMP on each router to this host:11019. To try it first,
-containerlab/13-hosts-demo-bgp in the bmpwatcher repo is a ready lab.
-Router configuration: https://github.com/Vadims06/bmpwatcher
-EOF
-  SUMMARY+=("BMP Watcher: printed setup instructions (manual, runs beside routers)")
 }
 
 # ---------- STARTERS ----------
@@ -310,156 +143,14 @@ start_topolograph() {
   SUMMARY+=("Topolograph started")
 }
 
-start_ospfwatcher() {
-  echo -e "\n${GREEN}=== Starting OSPF Watcher ===${NC}"
-  BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  if [[ ! -d "$BASE_DIR/ospfwatcher" ]]; then
-    echo "[$(date)] Cloning ospfwatcher repository..."
-    git clone https://github.com/Vadims06/ospfwatcher.git ospfwatcher
-    check_mark "OSPF Watcher repository cloned."
-  else
-    cross_mark "OSPF Watcher repository exists"
-  fi
-
-  cd ospfwatcher || exit
-
-  if [[ "$DEPLOY_OSPF_CLAB" == true ]]; then
-    echo "[$(date)] start prepairing clab"
-    ./containerlab/ospf01/prepare.sh
-    check_mark "Local clab prepaired."
-    # create expected folder for watcher logs
-    mkdir -p ./watcher
-    BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    # Symlink for logstash
-    ln -sfn "$BASE_DIR/containerlab/ospf01/watcher/logs" "$BASE_DIR/watcher"
-    
-    # Ask user for host IP. Communication between containers using 127.0.0.1 doesn't work
-    while true; do
-        read -rp "Enter the host IP address where Docker is hosted: " HOST_IP
-        if [[ -n "$HOST_IP" ]]; then
-            break
-        else
-            echo "Host IP cannot be empty. Please try again."
-        fi
-    done
-
-    # Replace TOPOLOGRAPH_HOST in .env
-    if [[ -f .env ]]; then
-        sed -i "s/^TOPOLOGRAPH_HOST=.*/TOPOLOGRAPH_HOST=${HOST_IP}/" .env
-        sed -i "s/^WEBHOOK_URL=.*/WEBHOOK_URL=${HOST_IP}/" .env
-        sed -i 's/^DEBUG_BOOL=False/DEBUG_BOOL=True/' .env
-        echo "[$(date)] DEBUG_BOOL set to True in .env"
-    fi
-
-    echo "[$(date)] start local clab"
-    sudo clab deploy --topo containerlab/ospf01/ospf01.clab.yml
-    check_mark "Local clab has been successfully started."
-    SUMMARY+=("OSPF Watcher lab deployed with Containerlab")
-  else
-    # If symlink exists, remove it and restart docker-compose
-    if [[ -L ./watcher/logs ]]; then
-        echo "[$(date)] Removing existing watcher/logs symlink to avoid conflicts"
-        unlink ./watcher/logs
-        echo "[$(date)] Restarting Docker Compose for affected services..."
-        # Optionally, you can specify the services if you don't want all
-        docker compose down
-        docker compose up -d
-
-        echo "[$(date)] Docker Compose restarted successfully."
-    fi
-    generate_watcher_configs "ospf"
-    ask_and_start_watcher "ospf"
-  fi
-
-  if ! check_container_running ospf-logstash; then
-    sudo $DOCKER_COMPOSE build
-    sudo $DOCKER_COMPOSE up -d
-    SUMMARY+=("Logstash to export OSPF Watcher logs started")
-  fi
-
-  cd ..
-}
-
-start_isiswatcher() {
-  echo -e "\n${GREEN}=== Starting ISIS Watcher ===${NC}"
-  BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  if [[ ! -d "$BASE_DIR/isiswatcher" ]]; then
-    echo "[$(date)] Cloning isiswatcher repository..."
-    git clone https://github.com/Vadims06/isiswatcher.git isiswatcher
-    check_mark "ISIS Watcher repository cloned."
-  else
-    cross_mark "ISIS Watcher repository exists or failed to clone."
-  fi
-
-  cd isiswatcher || exit
-
-  if [[ "$DEPLOY_ISIS_CLAB" == true ]]; then
-    echo "[$(date)] start prepairing clab"
-    ./containerlab/isis01/prepare.sh
-    check_mark "Local clab prepaired."
-    # create expected folder for watcher logs
-    mkdir -p ./watcher
-    BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    # Symlink for logstash
-    ln -sfn "$BASE_DIR/containerlab/isis01/watcher/logs" "$BASE_DIR/watcher"
-    
-    # Ask user for host IP. Communication between containers using 127.0.0.1 doesn't work
-    while true; do
-        read -rp "Enter the host IP address where Docker is hosted: " HOST_IP
-        if [[ -n "$HOST_IP" ]]; then
-            break
-        else
-            echo "Host IP cannot be empty. Please try again."
-        fi
-    done
-
-    # Replace TOPOLOGRAPH_HOST in .env
-    if [[ -f .env ]]; then
-        sed -i "s/^TOPOLOGRAPH_HOST=.*/TOPOLOGRAPH_HOST=${HOST_IP}/" .env
-        sed -i "s/^WEBHOOK_URL=.*/WEBHOOK_URL=${HOST_IP}/" .env
-        sed -i 's/^DEBUG_BOOL=False/DEBUG_BOOL=True/' .env
-        echo "[$(date)] DEBUG_BOOL set to True in .env"
-    fi
-
-    echo "[$(date)] start local clab"
-    sudo clab deploy --topo containerlab/isis01/isis01.clab.yml
-    check_mark "Local clab has been successfully started."
-    SUMMARY+=("IS-IS Watcher lab deployed with Containerlab")
-  else
-    # If symlink exists, remove it and restart docker-compose
-    if [[ -L ./watcher/logs ]]; then
-        echo "[$(date)] Removing existing watcher/logs symlink to avoid conflicts"
-        unlink ./watcher/logs
-        echo "[$(date)] Restarting Docker Compose for affected services..."
-        # Optionally, you can specify the services if you don't want all
-        docker compose down
-        docker compose up -d
-
-        echo "[$(date)] Docker Compose restarted successfully."
-    fi
-    generate_watcher_configs "isis"
-    ask_and_start_watcher "isis"
-  fi
-
-  if ! check_container_running isis-logstash; then
-    sudo $DOCKER_COMPOSE build
-    sudo $DOCKER_COMPOSE up -d
-    SUMMARY+=("Logstash to export ISIS Watcher logs started")
-  fi
-
-  cd ..
-}
-
 fix_ownership() {
   local user="${SUDO_USER:-root}"
   local group
   group=$(id -gn "$user")
-  for dir in topolograph ospfwatcher isiswatcher; do
-    if [[ -d "$dir" ]]; then
-      sudo chown -R "$user:$group" "$dir"
-      check_mark "Ownership fixed for $dir (set to $user:$group)"
-    fi
-  done
+  if [[ -d topolograph ]]; then
+    sudo chown -R "$user:$group" topolograph
+    check_mark "Ownership fixed for topolograph (set to $user:$group)"
+  fi
 }
 
 print_summary() {
@@ -474,17 +165,11 @@ main() {
   if [[ "$INSTALL_TOPO" == true ]]; then
     start_topolograph
   fi
-  if [[ "$INSTALL_OSPF" == true ]]; then
-    start_ospfwatcher
-  fi
-  if [[ "$INSTALL_ISIS" == true ]]; then
-    start_isiswatcher
-  fi
-  if [[ "$INSTALL_BMP" == true ]]; then
-    print_bmpwatcher_instructions
-  fi
   fix_ownership
   print_summary
+  # Watchers that feed Topolograph are registered from its UI, an Enterprise feature.
+  echo -e "\nWatchers that send live events to Topolograph are part of Enterprise: https://topolograph.com/#editions"
+  echo "Standalone watchers (logs, ELK, Zabbix, webhooks) are free: https://github.com/Vadims06/ospfwatcher, https://github.com/Vadims06/isiswatcher, https://github.com/Vadims06/bmpwatcher"
 }
 
 main

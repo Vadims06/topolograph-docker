@@ -14,7 +14,7 @@ cp env.example .env
 docker-compose pull
 docker-compose up -d
 ```
-or run `install.sh` script to start Topolograph and Watchers
+or run `install.sh` script to install Docker if needed and start Topolograph
 ```bash
 sudo ./install.sh
 ```
@@ -34,13 +34,7 @@ Open the URL `http://localhost:8080/` in a web-browser.
 
 Watchers that feed Topolograph with live events are an Enterprise feature, see [editions](https://topolograph.com/#editions). The watcher projects themselves stay free and open source and also run without Topolograph (text logs, ELK, Zabbix, Loki, webhooks); that path sends nothing to Topolograph: [ospfwatcher](https://github.com/Vadims06/ospfwatcher), [isiswatcher](https://github.com/Vadims06/isiswatcher), [bmpwatcher](https://github.com/Vadims06/bmpwatcher).
 
-`install.sh` sets up the OSPF and IS-IS watchers (GRE or BGP-LS) as
-containerlab labs. The **BMP Watcher** for the BGP control plane runs beside
-your routers rather than in this compose stack, since routers dial in to it
-over BMP; choose it in `install.sh` for the setup steps, or see the
-[bmpwatcher README](https://github.com/Vadims06/bmpwatcher). To try the BGP
-view without any of this, open Topolograph — the generated BGP demo topology
-loads on first visit; walkthrough at `https://topolograph.com/how-to/bgp`.
+With Enterprise, a watcher is added from the Topolograph UI (Add → Watcher), which shows one install command for the watcher host. To try the BGP view without a watcher, open the demo graph: it carries BGP and EVPN data; walkthrough at https://topolograph.com/docs/rb-bgp.
 
 ## MCP Server Integration
 
