@@ -32,7 +32,7 @@ Open the URL `http://localhost:8080/` in a web-browser.
 
 ## Watchers
 
-Watchers that feed Topolograph with live events are an Enterprise feature, see [editions](https://topolograph.com/#editions). The watcher projects themselves stay free and open source and also run without Topolograph (text logs, ELK, Zabbix, Loki, webhooks); that path sends nothing to Topolograph: [ospfwatcher](https://github.com/Vadims06/ospfwatcher), [isiswatcher](https://github.com/Vadims06/isiswatcher), [bmpwatcher](https://github.com/Vadims06/bmpwatcher).
+Watchers that feed Topolograph with live events are an Enterprise feature, see [editions](https://topolograph.com/#editions).
 
 With Enterprise, a watcher is added from the Topolograph UI (Add → Watcher), which shows one install command for the watcher host. To try the BGP view without a watcher, open the demo graph: it carries BGP and EVPN data; walkthrough at https://topolograph.com/docs/rb-bgp.
 

@@ -169,7 +169,6 @@ main() {
   print_summary
   # Watchers that feed Topolograph are registered from its UI, an Enterprise feature.
   echo -e "\nWatchers that send live events to Topolograph are part of Enterprise: https://topolograph.com/#editions"
-  echo "Standalone watchers (logs, ELK, Zabbix, webhooks) are free: https://github.com/Vadims06/ospfwatcher, https://github.com/Vadims06/isiswatcher, https://github.com/Vadims06/bmpwatcher"
 }
 
 main
