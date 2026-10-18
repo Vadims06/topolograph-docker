@@ -1,4 +1,8 @@
 # topolograph-docker
+This repository runs the Community edition of Topolograph: free and self-hosted, the same product as https://topolograph.com. It covers LSDB snapshot upload, the network graph, paths, failure what-if, MPLS TE CSPF, the REST API, the SDK and MCP. Enterprise adds watchers (collectors) that feed Topolograph, BGP and EVPN routes over BMP, event history and timeline, SSO, roles, audit and priority support. Comparison and contact: https://topolograph.com/#editions.
+
+![Topolograph graph](https://raw.githubusercontent.com/Vadims06/topolograph/master/docs/static/ui/graph-overview.png)
+
 ## Quickstart
 Install Docker Desktop for Windows/Mac
 To get Topolograph Docker up and running run the following commands.
@@ -10,7 +14,7 @@ cp env.example .env
 docker-compose pull
 docker-compose up -d
 ```
-or run `install.sh` script to start Topolograph and Watchers
+or run `install.sh` script to install Docker if needed and start Topolograph
 ```bash
 sudo ./install.sh
 ```
@@ -24,15 +28,13 @@ sudo ./install.sh
 The Topolograph site will be available after a few minutes.
 Open the URL `http://localhost:8080/` in a web-browser.
 
+![Upload an LSDB](https://raw.githubusercontent.com/Vadims06/topolograph/master/docs/static/ui/upload-lsdb.png)
+
 ## Watchers
 
-`install.sh` sets up the OSPF and IS-IS watchers (GRE or BGP-LS) as
-containerlab labs. The **BMP Watcher** for the BGP control plane runs beside
-your routers rather than in this compose stack, since routers dial in to it
-over BMP; choose it in `install.sh` for the setup steps, or see the
-[bmpwatcher README](https://github.com/Vadims06/bmpwatcher). To try the BGP
-view without any of this, open Topolograph — the generated BGP demo topology
-loads on first visit; walkthrough at `https://topolograph.com/how-to/bgp`.
+Watchers that feed Topolograph with live events are an Enterprise feature, see [editions](https://topolograph.com/#editions).
+
+With Enterprise, a watcher is added from the Topolograph UI (Add → Watcher), which shows one install command for the watcher host. To try the BGP view without a watcher, open the demo graph: it carries BGP and EVPN data; walkthrough at https://topolograph.com/docs/rb-bgp.
 
 ## MCP Server Integration
 
@@ -43,6 +45,8 @@ This Docker setup includes an MCP (Model Context Protocol) server that enables A
 - Path calculation and backup path analysis
 - Graph status and connectivity monitoring
 - Node and edge queries
+
+Tools that read watcher events or event history need Enterprise data; the other tools work on uploaded graphs.
 
 The MCP server automatically connects to the Flask API and supports authentication via API tokens.
 
