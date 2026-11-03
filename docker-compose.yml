@@ -64,7 +64,7 @@ services:
       - backend
 
   mongodb:
-    image: mongo:4.2 # Upgrade to 4.2 First, Then to 4.4.29
+    image: mongo:8.0 # from 4.2: see "Upgrading MongoDB" in README.md
     container_name: mongodb
     restart: unless-stopped
     command: mongod --auth
