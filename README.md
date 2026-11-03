@@ -24,6 +24,32 @@ sudo ./install.sh
 The Topolograph site will be available after a few minutes.
 Open the URL `http://localhost:8080/` in a web-browser.
 
+## Upgrading MongoDB
+Since November 2026 `docker-compose.yml` runs MongoDB 8.0. The Topolograph image is pinned to a tag in the same file, so `git pull` moves the image and MongoDB together; newer images need MongoDB 4.4 or later and stop at start with a link to this section if MongoDB is older. An install created with MongoDB 4.2 keeps its data
+in a format 8.0 cannot open: the `mongodb` container stops with `UPGRADE PROBLEM` and your data stays untouched.
+Move the data with a dump and a restore:
+
+```bash
+# 0. MongoDB 5.0 and later need a CPU with AVX; no output here means stay on 4.2
+grep -m1 -o avx /proc/cpuinfo
+# 1. with the old docker-compose.yml (mongo:4.2), dump the Topolograph data
+docker-compose up -d mongodb
+docker-compose exec -T mongodb sh -c 'mongodump --archive --gzip -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --db "$MONGO_INITDB_DATABASE" --excludeCollection system.users --excludeCollection system.version' > topolograph-mongo42.archive.gz
+ls -lh topolograph-mongo42.archive.gz   # must not be empty; keep it until step 4 succeeds
+# 2. remove the old data volume
+docker-compose down
+docker volume ls | grep mongodbdata
+docker volume rm <the volume listed above>
+# 3. take the new docker-compose.yml and start MongoDB 8.0 with an empty volume
+git pull
+docker-compose up -d mongodb
+# 4. restore, then start everything
+docker-compose exec -T mongodb sh -c 'mongorestore --archive --gzip -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin' < topolograph-mongo42.archive.gz
+docker-compose up -d
+```
+
+To go back, check out the previous `docker-compose.yml`, remove the volume again and restore the same archive into MongoDB 4.2.
+
 ## Watchers
 
 `install.sh` sets up the OSPF and IS-IS watchers (GRE or BGP-LS) as

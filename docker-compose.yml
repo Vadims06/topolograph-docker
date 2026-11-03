@@ -2,7 +2,7 @@ services:
 
   flask:
     container_name: flask
-    image: vadims06/topolograph:latest
+    image: vadims06/topolograph:3.0.5
     restart: unless-stopped
     environment:
       # Reverse proxies in front of the app (nginx): only their X-Forwarded-For entry is trusted.
@@ -33,7 +33,7 @@ services:
 
   flask-socketio:
     container_name: flask-socketio
-    image: vadims06/topolograph:latest
+    image: vadims06/topolograph:3.0.5
     restart: unless-stopped
     command: ["gunicorn", "--worker-class", "gevent", "-w", "1", "--bind", "0.0.0.0:5000", "--timeout", "90", "wsgi:app"]
     environment:
@@ -64,7 +64,7 @@ services:
       - backend
 
   mongodb:
-    image: mongo:4.2 # Upgrade to 4.2 First, Then to 4.4.29
+    image: mongo:8.0 # from 4.2: see "Upgrading MongoDB" in README.md
     container_name: mongodb
     restart: unless-stopped
     command: mongod --auth
@@ -114,7 +114,7 @@ services:
       - frontend
 
   flask-create-creds-from-env:
-    image: vadims06/topolograph:latest
+    image: vadims06/topolograph:3.0.5
     environment:
       TOPOLOGRAPH_PORT: 5000
       TOPOLOGRAPH_HOST: flask
