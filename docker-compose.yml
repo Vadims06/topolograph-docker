@@ -2,7 +2,7 @@ services:
 
   flask:
     container_name: flask
-    image: vadims06/topolograph:2.73.2
+    image: vadims06/topolograph:3.0.5
     restart: unless-stopped
     environment:
       # Reverse proxies in front of the app (nginx): only their X-Forwarded-For entry is trusted.
@@ -33,7 +33,7 @@ services:
 
   flask-socketio:
     container_name: flask-socketio
-    image: vadims06/topolograph:2.73.2
+    image: vadims06/topolograph:3.0.5
     restart: unless-stopped
     command: ["gunicorn", "--worker-class", "gevent", "-w", "1", "--bind", "0.0.0.0:5000", "--timeout", "90", "wsgi:app"]
     environment:
@@ -114,7 +114,7 @@ services:
       - frontend
 
   flask-create-creds-from-env:
-    image: vadims06/topolograph:2.73.2
+    image: vadims06/topolograph:3.0.5
     environment:
       TOPOLOGRAPH_PORT: 5000
       TOPOLOGRAPH_HOST: flask
