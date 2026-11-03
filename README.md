@@ -25,7 +25,7 @@ The Topolograph site will be available after a few minutes.
 Open the URL `http://localhost:8080/` in a web-browser.
 
 ## Upgrading MongoDB
-Since November 2026 `docker-compose.yml` runs MongoDB 8.0. An install created with MongoDB 4.2 keeps its data
+Since November 2026 `docker-compose.yml` runs MongoDB 8.0. The Topolograph image is pinned to a tag in the same file, so `git pull` moves the image and MongoDB together; newer images need MongoDB 4.4 or later and stop at start with a link to this section if MongoDB is older. An install created with MongoDB 4.2 keeps its data
 in a format 8.0 cannot open: the `mongodb` container stops with `UPGRADE PROBLEM` and your data stays untouched.
 Move the data with a dump and a restore:
 
